@@ -8,28 +8,34 @@ import matplotlib.pyplot as plt
 
 
 class TSP:
-    def __init__(self, file : str, population : int = 5, start_pheromone : int = 1, evaporation : float = 0.5):
+    def __init__(self, file: str, population: int = 5, start_pheromone: int = 1, evaporation: float = 0.3, beta: int = 5):
         self.data: Benchmark = Benchmark(file)
         self.num_of_points = self.data.length
         self.population_number = population
         self.start_pheromone = start_pheromone
         self.evaporation_coefficient = evaporation
+        self.beta = beta
         self.cost = self._calculate_cost_matrix()
         self.pheromone = self._create_pheromone_matrix()
         self.population = self._create_population()
 
     def find_optimal_path(self):
-        for i in range(400):
-            print(i)
+        min_distance = 1000000000
+        min_path = []
+        for i in range(50):
             self.population = self._create_population()
             for ant in self.population:
                 while ant.not_visited:
                     new_point = self._get_new_point_by_roulette_wheel(ant)
                     ant.go_to_next_point(new_point, self.cost[ant.current_point, new_point])
                 ant.last_point(self.cost[ant.current_point, ant.start_point])
+                if ant.distance_sum < min_distance:
+                    min_distance = ant.distance_sum
+                    min_path = ant.visited
             self._update_pheromones()
-            #print(self.population[0].distance_sum, self.population[1].distance_sum, self.population[2].distance_sum, self.population[3].distance_sum, self.population[4].distance_sum)
+            print(i, sum([ant.distance_sum for ant in self.population]) / self.population_number)
         #self._plot_path()
+        self._plot_min_path(min_path, min_distance)
 
     def _plot_path(self):
         colors = ['b', 'g', 'm', 'y', 'c']
@@ -38,7 +44,14 @@ class TSP:
             print(ant.distance_sum)
             x = [self.data.points[node].x for node in ant.visited]
             y = [self.data.points[node].y for node in ant.visited]
-            #plt.plot(x, y, colors[idx])
+            plt.plot(x, y, colors[idx])
+        plt.show()
+
+    def _plot_min_path(self, min_path, min_distance):
+        print(min_distance)
+        x = [self.data.points[node].x for node in min_path]
+        y = [self.data.points[node].y for node in min_path]
+        plt.plot(x, y, 'g')
         plt.show()
 
     def _update_pheromones(self):
@@ -74,7 +87,7 @@ class TSP:
         return denominator
 
     def _pheromone_mul_inverted_cost(self, ant: Ant, point: int):
-        return self.pheromone[ant.current_point, point] * (1 / self.cost[ant.current_point, point])
+        return self.pheromone[ant.current_point, point] * (1 / self.cost[ant.current_point, point])**self.beta
 
     def _calculate_edge_probability(self, ant: Ant, point: int, denominator: float):
         return self._pheromone_mul_inverted_cost(ant, point) / denominator
@@ -101,6 +114,6 @@ class TSP:
         
 
 if __name__ == '__main__':
-    tsp = TSP('48') 
+    tsp = TSP('pbl395') 
     tsp.find_optimal_path() 
         

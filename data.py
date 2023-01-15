@@ -8,7 +8,7 @@ class Benchmark:
             for idx, line in enumerate(f):
                 if idx > 7 and line.split()[0] != 'EOF':
                     array = line.split()
-                    self.points.append(Point(int(array[0]) - 1, int(array[1]), int(array[2])))
+                    self.points.append(Point(int(array[0]) - 1, float(array[1]), float(array[2])))
         self.length = len(self.points)
 
     def print_data(self):
