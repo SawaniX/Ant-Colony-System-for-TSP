@@ -1,8 +1,8 @@
 from data import Benchmark
 from point import Point
 from ant import Ant
+from update_pheromone import Pheromone
 from math import sqrt
-from random import uniform
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -22,11 +22,12 @@ class TSP:
     def find_optimal_path(self):
         min_distance = 1000000000
         min_path = []
-        for i in range(50):
+        for i in range(5):
             self.population = self._create_population()
             for ant in self.population:
+                update = Pheromone(ant, self.pheromone, self.cost, self.beta)
                 while ant.not_visited:
-                    new_point = self._get_new_point_by_roulette_wheel(ant)
+                    new_point = update.get_new_point_by_roulette_wheel()
                     ant.go_to_next_point(new_point, self.cost[ant.current_point, new_point])
                 ant.last_point(self.cost[ant.current_point, ant.start_point])
                 if ant.distance_sum < min_distance:
@@ -37,21 +38,12 @@ class TSP:
         #self._plot_path()
         self._plot_min_path(min_path, min_distance)
 
-    def _plot_path(self):
-        colors = ['b', 'g', 'm', 'y', 'c']
-        plt.plot([point.x for point in self.data.points], [point.y for point in self.data.points], 'ro')
-        for idx, ant in enumerate(self.population):
-            print(ant.distance_sum)
-            x = [self.data.points[node].x for node in ant.visited]
-            y = [self.data.points[node].y for node in ant.visited]
-            plt.plot(x, y, colors[idx])
-        plt.show()
-
     def _plot_min_path(self, min_path, min_distance):
         print(min_distance)
+        plt.scatter([point.x for point in self.data.points], [point.y for point in self.data.points], s=10)
         x = [self.data.points[node].x for node in min_path]
         y = [self.data.points[node].y for node in min_path]
-        plt.plot(x, y, 'g')
+        plt.plot(x, y, 'r')
         plt.show()
 
     def _update_pheromones(self):
@@ -62,35 +54,6 @@ class TSP:
             for idx, point in enumerate(ant.visited[:-1]):
                 self.pheromone[point, ant.visited[idx+1]] += 1 / ant.distance_sum
                 self.pheromone[ant.visited[idx+1], point] += 1 / ant.distance_sum
-
-    def _get_new_point_by_roulette_wheel(self, ant: Ant):
-        cumulative_sum = self._calculate_cumulative_sum(ant)
-        #print(cumulative_sum)
-        random_number = uniform(0, next(iter(cumulative_sum.values())))
-        for point, sum in list(reversed(list(cumulative_sum.items()))):
-            if random_number < sum:
-                return point
-    
-    def _calculate_cumulative_sum(self, ant):
-        probabilities = self._calculate_probabilities(ant)
-        return {point : sum(list(probabilities.values())[idx:]) for idx, point in enumerate(probabilities.keys())}
-
-    def _calculate_probabilities(self, ant: Ant):
-        denominator = self._calculate_denominator(ant)
-        return {point : self._calculate_edge_probability(ant, point, denominator) for point in ant.not_visited}
-
-    def _calculate_denominator(self, ant: Ant):
-        denominator = 0
-        for point in ant.not_visited:
-            if point != ant.current_point:
-                denominator += self._pheromone_mul_inverted_cost(ant, point)
-        return denominator
-
-    def _pheromone_mul_inverted_cost(self, ant: Ant, point: int):
-        return self.pheromone[ant.current_point, point] * (1 / self.cost[ant.current_point, point])**self.beta
-
-    def _calculate_edge_probability(self, ant: Ant, point: int, denominator: float):
-        return self._pheromone_mul_inverted_cost(ant, point) / denominator
 
     def _calculate_cost_matrix(self):
         point: Point; next_point: Point
