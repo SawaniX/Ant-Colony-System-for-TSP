@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 
 class TSP:
-    def __init__(self, file: str, population: int = 5, start_pheromone: int = 1, evaporation: float = 0.3, beta: int = 5):
+    def __init__(self, file: str, population: int = 10, start_pheromone: int = 1, evaporation: float = 0.2, beta: int = 5):
         self.data: Benchmark = Benchmark(file)
         self.num_of_points = self.data.length
         self.population_number = population
@@ -19,10 +19,17 @@ class TSP:
         self.pheromone = self._create_pheromone_matrix()
         self.population = self._create_population()
 
+        self.tmax = 0.6
+        self.tmin = 0.005
+        # pbl395, tmax = 0.7, tmin = 0.01, beta = 3, population = 10 ============ 1611
+        # pbl395, tmax = 0.6, tmin = 0.01, beta = 5, pop = 10, eva = 0.2 ========
+        # xqf131, tmax = 0.6, tmin = 0.01, beta = 5, eva = 0.2 ========== 609
+
     def find_optimal_path(self):
-        min_distance = 1000000000
-        min_path = []
-        for i in range(5):
+        distance = 1000000000
+        path = []
+        for i in range(150):
+            min_distance, min_path = 1000000000, []
             self.population = self._create_population()
             for ant in self.population:
                 update = Pheromone(ant, self.pheromone, self.cost, self.beta)
@@ -33,10 +40,14 @@ class TSP:
                 if ant.distance_sum < min_distance:
                     min_distance = ant.distance_sum
                     min_path = ant.visited
-            self._update_pheromones()
-            print(i, sum([ant.distance_sum for ant in self.population]) / self.population_number)
+                if ant.distance_sum < distance:
+                    distance = ant.distance_sum
+                    path = ant.visited
+            print(i, min_distance)
+            self._update_pheromones(min_path, min_distance)
+            #print(i, sum([ant.distance_sum for ant in self.population]) / self.population_number)
         #self._plot_path()
-        self._plot_min_path(min_path, min_distance)
+        self._plot_min_path(path, distance)
 
     def _plot_min_path(self, min_path, min_distance):
         print(min_distance)
@@ -46,14 +57,19 @@ class TSP:
         plt.plot(x, y, 'r')
         plt.show()
 
-    def _update_pheromones(self):
+    def _update_pheromones(self, min_path, min_distance):
         for iy, ix in np.ndindex(self.pheromone.shape):
             self.pheromone[iy, ix] = (1 - self.evaporation_coefficient) * self.pheromone[iy, ix]
             self.pheromone[ix, iy] = (1 - self.evaporation_coefficient) * self.pheromone[ix, iy]
-        for ant in self.population:
-            for idx, point in enumerate(ant.visited[:-1]):
-                self.pheromone[point, ant.visited[idx+1]] += 1 / ant.distance_sum
-                self.pheromone[ant.visited[idx+1], point] += 1 / ant.distance_sum
+        for idx, point in enumerate(min_path[:-1]):
+            self.pheromone[point, min_path[idx+1]] += 1 / min_distance
+            self.pheromone[min_path[idx+1], point] += 1 / min_distance
+            if self.pheromone[point, min_path[idx+1]] < self.tmin:
+                self.pheromone[point, min_path[idx+1]] = self.tmin
+                self.pheromone[min_path[idx+1], point] = self.tmin
+            elif self.pheromone[point, min_path[idx+1]] > self.tmax:
+                self.pheromone[point, min_path[idx+1]] = self.tmax
+                self.pheromone[min_path[idx+1], point] = self.tmax
 
     def _calculate_cost_matrix(self):
         point: Point; next_point: Point

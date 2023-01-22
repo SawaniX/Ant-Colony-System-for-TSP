@@ -46,3 +46,4 @@ def test_start_pheromone_matrix_other_start_pheromone() -> None:
 def test_ants_population() -> None:
     tsp = TSP('test_calc_cost_matrix_the_same_points', start_pheromone=10)
     assert len(tsp.population) == 5
+
